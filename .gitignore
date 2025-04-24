@@ -1,0 +1,73 @@
+# Python virtual environments
+.venv
+venv/
+env/
+ENV/
+.Python
+.python-version
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+*.egg
+
+# Local development settings
+.env
+.flaskenv
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+logs/
+*.log
+log.txt
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+.nox/
+
+# Documentation
+docs/_build/
+site/
+
+# Database
+*.db
+*.sqlite3
+*.sqlite
+
+# OS specific files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# OpenAI API keys and secrets
+.openai
+openai.key
+
+# Node.js (in case of a frontend)
+node_modules/
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+
+# Build outputs
+frontend/build/
+frontend/dist/
+
+backend/.env.example
+frontend/.env.example
+
+
