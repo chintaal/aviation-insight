@@ -48,7 +48,7 @@ AVWX_API_KEY="your_avwx_key_here"
 Use the master runner script to start the server with various options:
 
 ```bash
-# Basic usage - starts server at http://localhost:8001
+# Basic usage - starts server at http://localhost:8000
 python master_run.py
 
 # Start with browser opening to the API docs
