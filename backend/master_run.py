@@ -64,7 +64,7 @@ def print_api_key_status():
         print("   Add API keys to your .env file to enable all features.\n")
 
 
-def run_server(host: str = "0.0.0.0", port: int = 8000, reload: bool = True, 
+def run_server(host: str = "0.0.0.0", port: int = 8001, reload: bool = True, 
                log_level: str = "info", open_browser: bool = False, 
                env_file: str = ".env", debug: bool = False):
     """Run the FastAPI server"""
@@ -146,8 +146,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--port", 
         type=int, 
-        default=8000,
-        help="Port to run the server on (default: 8000)"
+        default=8001,
+        help="Port to run the server on (default: 8001)"
     )
     parser.add_argument(
         "--no-reload", 

@@ -250,7 +250,7 @@
 					} else if (meters < 5000) {
 						visCategory = "reduced";
 						vfrStatus = "marginal for VFR";
-					} else if (meters < 8000) {
+					} else if (meters < 8001) {
 						visCategory = "moderate";
 						vfrStatus = "sufficient for VFR";
 					}

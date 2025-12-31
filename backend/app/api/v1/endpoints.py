@@ -686,3 +686,119 @@ async def generate_pirep_summary(request: Dict[str, Any]):
             "reasoning": "Review the raw PIREP data for details.",
             "hazard_assessment": "Consider all available pilot reports when planning your flight."
         }
+
+@router.get("/airport-summary/{station}", response_model=Dict[str, Any], summary="Get comprehensive airport weather summary")
+async def get_airport_summary(
+    station: str,
+    distance: Optional[int] = Query(200, description="Search radius for PIREPs in nautical miles"),
+    age: Optional[float] = Query(1.5, description="Maximum age of PIREPs in hours"),
+    taf_hours: Optional[int] = Query(12, description="Hours of TAF forecast to include"),
+    metar_hours: Optional[int] = Query(1, description="Hours of METAR history to include")
+):
+    """
+    Retrieve all weather reports for an airport and generate a comprehensive AI-powered summary.
+    
+    - **station**: ICAO airport code (e.g., KATL)
+    - **distance**: Search radius for PIREPs in nautical miles
+    - **age**: Maximum age of PIREPs in hours
+    - **taf_hours**: Hours of TAF forecast to include
+    - **metar_hours**: Hours of METAR history to include
+    
+    Returns a comprehensive summary with all reports (METAR, TAF, PIREP, SIGMET) and an AI-generated analysis.
+    """
+    try:
+        # Fetch all reports concurrently
+        metar_service = AWCMetarService()
+        taf_service = AWCTafService()
+        pirep_service = PirepService()
+        sigmet_service = AWCSigmetService()
+        
+        reports = {}
+        errors = {}
+        
+        try:
+            # Fetch METAR
+            metar = await metar_service.get_metar(station, metar_hours)
+            reports["metar"] = metar.model_dump() if hasattr(metar, "model_dump") else metar.dict()
+        except Exception as e:
+            logger.error(f"Error fetching METAR: {str(e)}")
+            errors["metar"] = str(e)
+            reports["metar"] = None
+        
+        try:
+            # Fetch TAF
+            taf = await taf_service.get_taf(station, taf_hours)
+            reports["taf"] = taf.model_dump() if hasattr(taf, "model_dump") else taf.dict()
+        except Exception as e:
+            logger.error(f"Error fetching TAF: {str(e)}")
+            errors["taf"] = str(e)
+            reports["taf"] = None
+        
+        try:
+            # Fetch PIREPs
+            pireps = await pirep_service.get_pireps(station, distance, age)
+            reports["pireps"] = [p.model_dump() if hasattr(p, "model_dump") else p.dict() for p in pireps]
+        except Exception as e:
+            logger.error(f"Error fetching PIREPs: {str(e)}")
+            errors["pireps"] = str(e)
+            reports["pireps"] = []
+        
+        try:
+            # Fetch SIGMETs (using a bounding box around the station - simplified approach)
+            # For now, fetch all SIGMETs and filter client-side if needed
+            sigmets = await sigmet_service.get_sigmets()
+            reports["sigmets"] = [s.model_dump() if hasattr(s, "model_dump") else s.dict() for s in sigmets]
+        except Exception as e:
+            logger.error(f"Error fetching SIGMETs: {str(e)}")
+            errors["sigmets"] = str(e)
+            reports["sigmets"] = []
+        
+        finally:
+            await metar_service.close()
+            await taf_service.close()
+            await pirep_service.close()
+            await sigmet_service.close()
+        
+        # Generate comprehensive AI summary
+        ai_summary = None
+        try:
+            # Create a comprehensive prompt for all reports
+            summary_data = {
+                "station": station,
+                "metar": reports.get("metar"),
+                "taf": reports.get("taf"),
+                "pireps": reports.get("pireps", []),
+                "sigmets": reports.get("sigmets", [])
+            }
+            
+            # Use OpenAI to generate a comprehensive summary
+            ai_summary = await openai_service.generate_comprehensive_summary(summary_data)
+            
+        except Exception as e:
+            logger.error(f"Error generating AI summary: {str(e)}")
+            # Fallback summary
+            ai_summary = {
+                "overview": f"Comprehensive weather summary for {station}",
+                "current_conditions": "Review individual reports for detailed information.",
+                "forecast_outlook": "Check TAF for forecast details.",
+                "hazards": "Review PIREPs and SIGMETs for hazard information.",
+                "recommendations": "Always verify current conditions before flight."
+            }
+        
+        return {
+            "station": station,
+            "timestamp": time.time(),
+            "reports": reports,
+            "summary": ai_summary,
+            "errors": errors if errors else None,
+            "metadata": {
+                "distance": distance,
+                "age": age,
+                "taf_hours": taf_hours,
+                "metar_hours": metar_hours
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in get_airport_summary: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error generating airport summary: {str(e)}")

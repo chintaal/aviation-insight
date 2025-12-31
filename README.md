@@ -64,7 +64,7 @@ Aviation-Insight is a real-time, pilot-centric weather intelligence platform tha
    ```
 4. **Run API server**
    ```bash
-   uvicorn backend.master_run:app --reload --port 8000
+   uvicorn backend.master_run:app --reload --port 8001
    ```
 
 ### Frontend Setup
@@ -113,7 +113,7 @@ Aviation-Insight is a real-time, pilot-centric weather intelligence platform tha
 Once the API server is running, explore Swagger UI at:
 
 ```
-http://localhost:8000/docs
+http://localhost:8001/docs
 ```
 
 Core endpoints include:

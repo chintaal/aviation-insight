@@ -2,7 +2,7 @@
 	import '../app.css';
 	
 	// Navigation items for the sidebar
-	const navItems = [
+		const navItems = [
 		{ name: 'Home', path: '/', icon: 'home' },
 		{ 
 			name: 'API Testing', 
@@ -14,6 +14,7 @@
 				{ name: 'SIGMET/AIRMET', path: '/api/sigmet', description: 'Weather advisories' }
 			]
 		},
+		{ name: 'Airport Summary', path: '/airport-summary', icon: 'summary', description: 'AI-powered comprehensive weather analysis' },
 		{ name: 'METAR Display', path: '/cockpit-metar2', icon: 'display', description: 'Pilot-friendly weather display' },
 		{ name: 'TAF Display', path: '/cockpit-taf', icon: 'forecast', description: 'Interactive forecast visualization' },
 		{ name: 'API Documentation', path: '/api/docs', icon: 'document' }
@@ -36,7 +37,8 @@
 		menu: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />`,
 		close: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />`,
 		display: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />`,
-		forecast: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />`
+		forecast: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />`,
+		summary: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />`
 	};
 </script>
 

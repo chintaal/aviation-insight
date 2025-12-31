@@ -15,9 +15,9 @@ def mock_pirep_data():
             location="33.43,-112.02",
             raw_text="PIREP KPHX UA /OV KPHX /TM 1800 /FL080 /TP B738 /TB LGT-MOD /RM SMOOTH",
             aircraft_type="B738",
-            altitude=8000,
+            altitude=8001,
             report_type="UA",
-            turbulence={"severity": "LGT-MOD", "floor": 8000, "ceiling": 8000},
+            turbulence={"severity": "LGT-MOD", "floor": 8001, "ceiling": 8001},
             raw_data={}
         )
     ]
@@ -44,7 +44,7 @@ async def test_get_pirep_by_station_avwx(mock_get_pirep, mock_pirep_data):
             location="33.43,-112.02",
             raw_text="/UA /OV KPHX /TM 1800 /FL080 /TP B738 /TB LGT-MOD /RM SMOOTH",
             aircraft_type="B738",
-            altitude=8000,
+            altitude=8001,
             report_type="UA",
             turbulence={"severity": "LGT-MOD"},
             raw_data={}
@@ -81,7 +81,7 @@ async def test_get_pirep_multi_by_station(mock_avwx_get_pirep, mock_awc_get_pire
             location="33.43,-112.02",
             raw_text="/UA /OV KPHX /TM 1800 /FL080 /TP B738 /TB LGT-MOD /RM SMOOTH",
             aircraft_type="B738",
-            altitude=8000,
+            altitude=8001,
             report_type="UA",
             raw_data={}
         )

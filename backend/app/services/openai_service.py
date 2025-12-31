@@ -4,7 +4,8 @@ OpenAI Service for generating pilot-friendly weather report summaries
 import logging
 import asyncio
 import os
-from typing import Dict, Any, Optional, Union
+import json
+from typing import Dict, Any, Optional, Union, List
 from openai import AsyncOpenAI
 from ..core.config import settings
 
@@ -165,6 +166,206 @@ Structure your response with clear sections and conclude with specific avoidance
 
         else:
             return f"Please provide a comprehensive analysis of this aviation weather information with detailed operational implications for pilots: {report_data}"
+    
+    async def generate_comprehensive_summary(self, all_reports: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """
+        Generate a comprehensive, visual, and detailed summary of all weather reports for an airport.
+        
+        Args:
+            all_reports: Dictionary containing METAR, TAF, PIREPs, and SIGMETs
+            
+        Returns:
+            A comprehensive summary dictionary with overview, current conditions, forecast, hazards, and recommendations
+        """
+        if not self.api_key:
+            logger.warning("OpenAI API key not configured, cannot generate comprehensive summary")
+            return self._generate_fallback_comprehensive_summary(all_reports)
+        
+        try:
+            station = all_reports.get("station", "unknown")
+            
+            # Build comprehensive prompt
+            prompt = f"""Create a super visual and detailed comprehensive weather report summary for airport {station}.
+
+METAR (Current Conditions):
+{self._format_metar_for_summary(all_reports.get("metar"))}
+
+TAF (Forecast):
+{self._format_taf_for_summary(all_reports.get("taf"))}
+
+PIREPs (Pilot Reports):
+{self._format_pireps_for_summary(all_reports.get("pireps", []))}
+
+SIGMETs (Weather Advisories):
+{self._format_sigmets_for_summary(all_reports.get("sigmets", []))}
+
+Please provide a comprehensive, visually structured summary with the following sections:
+
+1. **Executive Overview**: A high-level summary of current conditions and key concerns
+2. **Current Conditions Analysis**: Detailed breakdown of METAR with flight category, visibility, ceiling, winds, and weather phenomena
+3. **Forecast Outlook**: Detailed TAF analysis with timeline of expected changes, IFR/VFR transitions, and significant weather
+4. **Hazard Assessment**: Comprehensive analysis of PIREPs and SIGMETs, including turbulence, icing, thunderstorms, and other hazards
+5. **Operational Recommendations**: Specific, actionable recommendations for flight planning, including:
+   - Best times to fly
+   - Altitude recommendations
+   - Route considerations
+   - Equipment requirements
+   - Risk factors
+
+Format the response as a structured JSON object with these keys:
+- overview: string
+- current_conditions: object with keys: flight_category, visibility, ceiling, winds, weather, temperature, pressure, summary
+- forecast_outlook: object with keys: timeline, ifr_periods, significant_changes, summary
+- hazards: object with keys: turbulence, icing, thunderstorms, other, summary
+- recommendations: object with keys: flight_planning, timing, altitude, equipment, risk_assessment
+
+Make the summary detailed, professional, and actionable for pilots."""
+            
+            logger.info(f"Generating comprehensive summary for {station} using model {self.model}")
+            
+            response = await self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are an expert aviation weather briefing assistant. Provide comprehensive, detailed, and visually structured weather summaries that help pilots make informed flight planning decisions. Always prioritize safety and operational considerations."
+                    },
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.3,
+                max_tokens=2000,
+                response_format={"type": "json_object"}
+            )
+            
+            if response and response.choices and len(response.choices) > 0:
+                content = response.choices[0].message.content.strip()
+                try:
+                    summary = json.loads(content)
+                    logger.info(f"Generated comprehensive summary for {station} successfully")
+                    return summary
+                except json.JSONDecodeError:
+                    # If JSON parsing fails, return as structured text
+                    return {
+                        "overview": content[:500],
+                        "current_conditions": {"summary": content},
+                        "forecast_outlook": {"summary": content},
+                        "hazards": {"summary": content},
+                        "recommendations": {"summary": content}
+                    }
+            else:
+                logger.warning(f"No content returned from OpenAI for comprehensive summary")
+                return self._generate_fallback_comprehensive_summary(all_reports)
+                
+        except Exception as e:
+            logger.error(f"Error generating comprehensive summary: {str(e)}")
+            return self._generate_fallback_comprehensive_summary(all_reports)
+    
+    def _format_metar_for_summary(self, metar: Optional[Dict[str, Any]]) -> str:
+        """Format METAR data for summary prompt"""
+        if not metar:
+            return "No METAR data available"
+        
+        return f"""
+Station: {metar.get('station', 'Unknown')}
+Raw: {metar.get('raw_text', 'N/A')}
+Flight Category: {metar.get('flight_category', 'N/A')}
+Visibility: {metar.get('visibility', 'N/A')} SM
+Ceiling: {metar.get('ceiling', 'N/A')} ft
+Wind: {metar.get('wind_direction', 'N/A')}° at {metar.get('wind_speed', 'N/A')} kts
+Temperature: {metar.get('temperature', 'N/A')}°C
+Dewpoint: {metar.get('dewpoint', 'N/A')}°C
+"""
+    
+    def _format_taf_for_summary(self, taf: Optional[Dict[str, Any]]) -> str:
+        """Format TAF data for summary prompt"""
+        if not taf:
+            return "No TAF data available"
+        
+        valid_from = taf.get('valid_from', 'N/A')
+        valid_to = taf.get('valid_to', 'N/A')
+        
+        return f"""
+Station: {taf.get('station', 'Unknown')}
+Raw: {taf.get('raw_text', 'N/A')}
+Valid: {valid_from} to {valid_to}
+Forecast Periods: {len(taf.get('forecast', []))} periods
+"""
+    
+    def _format_pireps_for_summary(self, pireps: List[Dict[str, Any]]) -> str:
+        """Format PIREP data for summary prompt"""
+        if not pireps or len(pireps) == 0:
+            return "No PIREP data available"
+        
+        formatted = f"Total PIREPs: {len(pireps)}\n"
+        for i, pirep in enumerate(pireps[:10], 1):  # Limit to first 10
+            formatted += f"""
+PIREP {i}:
+Location: {pirep.get('location', 'Unknown')}
+Altitude: {pirep.get('altitude', 'N/A')}
+Aircraft: {pirep.get('aircraft_type', 'N/A')}
+Turbulence: {pirep.get('turbulence', {})}
+Icing: {pirep.get('icing', {})}
+Raw: {pirep.get('raw_text', 'N/A')[:200]}
+"""
+        return formatted
+    
+    def _format_sigmets_for_summary(self, sigmets: List[Dict[str, Any]]) -> str:
+        """Format SIGMET data for summary prompt"""
+        if not sigmets or len(sigmets) == 0:
+            return "No SIGMET data available"
+        
+        formatted = f"Total SIGMETs: {len(sigmets)}\n"
+        for i, sigmet in enumerate(sigmets[:10], 1):  # Limit to first 10
+            formatted += f"""
+SIGMET {i}:
+Phenomenon: {sigmet.get('phenomenon', 'Unknown')}
+Valid: {sigmet.get('valid_from', 'N/A')} to {sigmet.get('valid_to', 'N/A')}
+Altitude: {sigmet.get('altitude', {})}
+Raw: {sigmet.get('raw_text', 'N/A')[:200]}
+"""
+        return formatted
+    
+    def _generate_fallback_comprehensive_summary(self, all_reports: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate a fallback comprehensive summary when OpenAI is unavailable"""
+        station = all_reports.get("station", "unknown")
+        metar = all_reports.get("metar")
+        taf = all_reports.get("taf")
+        pireps = all_reports.get("pireps", [])
+        sigmets = all_reports.get("sigmets", [])
+        
+        return {
+            "overview": f"Comprehensive weather summary for {station}. Review all available reports for complete information.",
+            "current_conditions": {
+                "flight_category": metar.get("flight_category", "Unknown") if metar else "No data",
+                "visibility": metar.get("visibility", "N/A") if metar else "N/A",
+                "ceiling": metar.get("ceiling", "N/A") if metar else "N/A",
+                "winds": f"{metar.get('wind_direction', 'N/A')}° at {metar.get('wind_speed', 'N/A')} kts" if metar else "N/A",
+                "weather": "Check METAR for details",
+                "temperature": metar.get("temperature", "N/A") if metar else "N/A",
+                "pressure": "Check METAR for details",
+                "summary": f"Current conditions at {station}. Always verify with latest METAR before flight."
+            },
+            "forecast_outlook": {
+                "timeline": "Check TAF for detailed forecast",
+                "ifr_periods": "Review TAF for IFR conditions",
+                "significant_changes": "Monitor TAF updates",
+                "summary": f"Forecast available for {station}. Review TAF for detailed timeline."
+            },
+            "hazards": {
+                "turbulence": f"{len([p for p in pireps if p.get('turbulence')])} PIREPs mention turbulence" if pireps else "No PIREP data",
+                "icing": f"{len([p for p in pireps if p.get('icing')])} PIREPs mention icing" if pireps else "No PIREP data",
+                "thunderstorms": f"{len([s for s in sigmets if 'thunderstorm' in str(s.get('phenomenon', '')).lower()])} SIGMETs for thunderstorms" if sigmets else "No SIGMET data",
+                "other": "Review PIREPs and SIGMETs for other hazards",
+                "summary": "Review all PIREPs and SIGMETs for comprehensive hazard assessment."
+            },
+            "recommendations": {
+                "flight_planning": "Review all available weather data and consult with Flight Service",
+                "timing": "Consider current conditions and forecast trends",
+                "altitude": "Review PIREPs for altitude-specific conditions",
+                "equipment": "Ensure appropriate equipment for forecast conditions",
+                "risk_assessment": "Always conduct thorough preflight briefing"
+            }
+        }
 
 
 # Create a singleton instance
